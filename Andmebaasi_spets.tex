@@ -1,0 +1,901 @@
+% utf-8
+\documentclass[a4paper]{article}
+\usepackage{amsmath}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[estonian, english]{babel}
+\usepackage{paralist}
+\usepackage{xspace}
+\usepackage[estonian]{babel}
+
+\newcommand{\FALSE}{\textbf{FALSE}\xspace}
+\newcommand{\NA}{\textbf{NA}\xspace}
+\newcommand{\R}{\textsf{R}\xspace}
+\newcommand{\TRUE}{\textbf{TRUE}\xspace}
+
+\title{Estonian LFS panel}
+\author{Indrek Seppo \and Ott Toomet}
+
+\begin{document}
+\maketitle
+
+\selectlanguage{estonian}
+\section{Andmebaas}
+ETU aegridade andmebaasi peamine ülesanne on kogude ETU-dest kõik
+olemasolevad palgavaatlused ja võimaldada neid ühtsel viisil kasutada.
+Põhirõhk on muutujatel mida on võimalik jälgida üle kõigi aastate.
+
+Andmebaas koosneb kolmest komponendist
+\begin{itemize}
+\item Andmebaas ise.  Andmebaas on ASCIIpõhine tsv-faili kujul.
+\item Programm, mis selle algandmetest genereerib.  
+  \selectlanguage{english}  The program contains two main files: one
+  for transforming the old structure (1995-2000) and the other for
+  transforming the new structure (2000-).
+\item Documentation (this text).
+\end{itemize}
+
+Our aim is to represent numerically only real numeric data (such data
+where the common mathematical operations like addition and division
+make sense).  Other numerical codes (e.g. counties, ownership codes
+etc) will be represented as categorical variables (factors) where the
+possibly numerical codes are in labels.  \selectlanguage{estonian}
+
+
+\paragraph{Struktuur}
+
+\subparagraph{Küsitlust, vaatlust ning indiviidi identifitseerivad
+  abiandmed}
+Andmebaas koosneb vaatlustest, iga rida vastab ühele vaatlusele, ehk
+esitab ühe indiviidi andmed ühel konkreetsel ajahetkel. Ühe indiviidi
+kohta võib olla mitu vaatlust: 
+\begin{enumerate}
+\item kuni aastani 2000 küsitleti andmeid ka retrospektiivselt, st indiviidi
+  kohta on vaatlus nii küsitluse hetkele lähedase ajahetke kohta kui varasemate
+  ajahetkede kohta. Seega vastab ühele küsitlusele mitu vaatlust sama indiviidi
+  kohta.
+  \selectlanguage{english}
+\item Since the 2000 Q3, the same individuals are surveyed in several
+  waves while retrospective part is dropped.  Hence the database
+  includes several lines of data for every individual, describing
+  several survey weeks.
+
+  Note that there are several inconsistencies across the waves.  A
+  number of variables (such as ethnicity) may not be well defined.
+  This may also be because of errors in identifiers (such as swapping
+  around household member, which leads to inconsistent gender and year of
+  birth).  No attempt is made to correct for these problems.
+\end{enumerate}
+
+The first variables in the data indentify the survey wave (where the
+data originate from), individual, retrospectivity, and date for the
+observation.  Note that a single individual may have several
+observations for different dates.  The most important variables are
+perhaps the individual indentifier \verb|idPerson| and date of the
+observation \verb|date|.
+\begin{description}
+\item[id] The unique code of the respondent/survey.  This is in the
+  form YYYYQHHHHHHMMYYQ, where YYYY is the year and Q the quarter of
+  the survey, HHHHHH is the household id and MM is the household
+  member id.  Note that the retrospective and current data share the
+  same \texttt{id} although the make different lines in the database.
+  Use line number if you need unique observation code.
+\item[idHousehold] Unique code for the household in the form
+  YYYYQHHHHHH.  The YYYY and Q are the year and quarter, household
+  entered the survey for the first time (\texttt{wave} = 1).
+
+  Note that some of the waves are missing for some households.  We
+  still base the id on the year and quarter following \texttt{wave}.
+
+  Note also that household codes HHHHHH are recycled between waves.
+  HHHHH does not form unique household code across waves!
+  \selectlanguage{estonian}
+\item[indiviidi kood, \textit{idPerson}] Indiviidi kood
+  identifitseerib konkreetse indiviidi, kui tema kohta esineb mitmeid
+  vaatlusi (nagu toimub alates 2000-ndast aastast). 1995-1999 aasta ETUdes on
+  indiviidi kood sama, mis vaatluse kood. Edaspidi on see kujul HHHHHHMM000, kus
+  HHHHHH tähistab leibkonnanumbrit ja MM leibkonnaliikme numbrit (lisatud 000 on
+  jäetud tulevaste võimalike uuringulainete eristamiste tarvis). Iga
+  leibkonnaliige osaleb uuringus kuni neli korda, kahel järjestikusel kvartalil
+  ning peale kahe kvartalist vaheaega uuesti kahel järjestikusel kvartalil.
+\item[retrospektiivus, \textit{retrospective}] võimaldab eristada
+  retrospektiivseid ja oleviku (õieti lähimineviku - 1995 aasta alguses küsitud
+  1994 aasta sügise palk on märgitud mitteretrospektiivseks) kohta käivaid
+  vaatlusi. Retrospektiivsus on esitatud loogilise tunnusena kujul TRUE/FALSE, kus
+  TRUE tähendab, et vaatlus on retrospektiivne, ning FALSE, et
+  vaatlus käib lähimineviku kohta. Retrospektiivsete vaatluste korral tuleb
+  arvestada nii meenutamisega seotud vigadega kui valimi muutumisega (1995 aastal
+  uuritud 16-75 aasta vanused olid 1989 9-69 aasta vanused), mistõttu ei pruugi
+  aastate kaupa tehtavad võrdlused (näiteks 1989 ja 1993 a keskmine palk) olla
+  adekvaatsed, küll aga annavad nad teatud sissevaate inimese käitumise
+  dünaamikasse.
+\item[kuupäev, \textit{date}] ajahetk, mille kohta vaatlus käib. Ajahetk on
+  antud POSIX standardi järgi kuupäeva ja kellaajase täpsusega kujul YYYY-MM-DD
+  HH:MM:SS, kuigi küsimus võib olla püstitatud kujul "Kui palju te teenisite 1989
+  a. sügisel?". Sellisel juhul on kuupäevaks märgitud perioodi keskmine
+  (konkreetse näite korral 1. oktoober 1989), kellaajaks keskpäev.
+\end{description}
+\selectlanguage{english}
+Note that \emph{idPerson} and \emph{date} do not always form unique
+couples.  In some rare cases (2000-Q1 wave) the survey is conducted on
+the date which corresponds to a retrospective observation.  The user
+is responsible for identifying and correcting for these problems.
+\selectlanguage{estonian}
+
+\subsection{Küsitletava üldandmed}
+Küsitletava üldandmete blokis on küsitletava sugu, rahvus, sünniaasta,
+perekonnaseis jmt.
+
+\selectlanguage{english}
+\begin{description}
+\item[sex] 1 -- male; 2 -- female
+\item[birthYear] year of birth, 4-digits 
+\item[age] age of the respondent in years. As the birthday information
+  in (mostly) missing, it may be wrong by up to 6 months.  
+
+  The age is assumed to be >= 0.  This may be a problem in case of
+  data entry typos.
+
+  In case of wrong or missing survey date, the survey date is assumed
+  to be a specific date during the survey wave.  It may have an impact
+  on age as well, as $\text{age} = \text{survey date} -
+  \text{(assumed) birthday}$. 
+
+\item[nonEst] ethnic background other than Estonian.  
+
+  \selectlanguage{estonian}
+\item[Eestisse immigreerumise aeg, \textit{immigrTime}] aasta, millal tuli
+  Eestisse elama (kujul YYYY)
+
+  \selectlanguage{english}
+\item[maritalStatus]
+  \begin{inparaitem}
+  \item[1)] single;
+  \item[2)] co-habiting;
+  \item[3)] married;
+  \item[4)] widow;
+  \item[5)] divorced;
+  \item[6)] separated.
+  \end{inparaitem}
+  \begin{itemize}
+  \item The information is based on information on survey week, the
+    retrospective part may be wrong.
+  \item The coding was changed in 2008 and hence the data from that
+    date on, is based on different variables/questions.
+  \end{itemize}
+
+\item[InterEthHH] Interethnic household.  Does the household include
+  ethnic Estonians and Non-Estonians?  The other ethnic groups are not
+  distinguished. 
+
+  The information is based on the survey week and extrapolated to the
+  retrospective part.  
+
+  Data for LFS 1995 is missing, and all the households are coded as
+  mono-ethnic.  
+
+
+  \subsubsection{Language skills}
+  \label{sec:language}
+
+  ELFS includes self-reported language skills data.  Note the related
+  caveats: 
+  \begin{itemize}
+  \item The data is collected for the survey week only.  However, the
+    program writes the same skill levels for the retrospective
+    observations as well.
+  \item 1998-2007, the domestic language data only includes
+    information whether Estonian and/or other languages are spoken at
+    home.  The program assumes 'other' means Russian (which is true in
+    most cases, look data for 1995 and 1997).  From 2008 on, the
+    information is present for 'Estonian', 'Russian' and 'other'
+    domestic languages.
+  \end{itemize}
+
+\item[estLevel] Estonian language skills:
+  \begin{inparaitem}
+  \item[blank] no knowledge.
+  \item['3'] understanding;
+  \item['2'] speaking;
+  \item['1'] speaking and writing;
+  \item['home'] one of domestic languages;
+  \end{inparaitem}
+  The counterintuitive order retains the values in the original survey
+  data.  However, the \R factor is ordered (increasingly) according to
+  the skill level.
+\item[rusLevel] Russian skills;
+\item[engLevel] English skills;
+\item[FILevel] Finnish skills;
+
+  \subsubsection{Geography}
+  \label{sec:geography}
+
+\item[residenceCounty]
+  \label{item:residenceCounty} county of residence, code of Estonian
+  county.  \NA if not Estonian resident.
+  \begin{inparaitem}
+  \item[37] Harju (including Tallinn);
+  \item[39] Hiiu;
+  \item[44] Ida-Viru;
+  \item[49] Jõgeva;
+  \item[51] Järva;
+  \item[57] Lääne;
+  \item[59] Lääne-Viru;
+  \item[65] Põlva;
+  \item[67] Pärnu;
+  \item[70] Rapla;
+  \item[74] Saaremaa;
+  \item[78] Tartu;
+  \item[82] Valga;
+  \item[84] Viljandi;
+  \item[86] Võru.
+  \end{inparaitem}
+\item[residenceMunicipality] municipality of residence.  Corresponds
+  mostly to EHAK2008 specification.  However, certain territorial
+  units (as Tallinn and Kohtla-Järve neighbourhoods) are merged.
+\end{description}
+
+\subsection{Education}
+\begin{description}
+\item[edu] current highest completed education.  Three levels:
+  \emph{<=basic}, \emph{highSchool}, \emph{college}.
+\item[isced97] 1-digit ISCED97 for the highest completed education.
+  Only available for the survey week.  Note: for 1995, 1997, 2011, and
+  2012 waves this involves a fair amount of guesswork.  The variable
+  is ready coded for the intermittent years.
+\item[studying] whether currently studying (1) or not (0).  This is
+  about studying at \emph{school}, not about training courses, courses
+  for unemployed and hobby courses.
+\end{description}
+
+
+\subparagraph{Household Data}
+
+Note: the data includes the \emph{household} members, we do not
+analyze the eventual family relations between the members.  In
+particular, children are not necessarily kids of the responent(s).
+\selectlanguage{estonian}
+Lubatud on ajutine eemalolek, mis
+siinses kontekstis tähendab ilmselt õpinguid või haiglasviibimist.
+Retrospektiivsete vastuste juures on arvestatud üksnes küsitluse hetkel
+leibkonnas viibivaid lapsi (kelle vanusest on lahutatud küsitluse hetke ning
+vaatluse hetke vaheline aeg), mille tõttu kannatab olulisult täpsus! See
+tähendab, et arvestamata on vahepeal surnud lapsed ning valesti võivad olla
+arvestatud leibkonda vahetanud lapsed. Eriti oluliseks muutub see 1995 aasta ETU
+retrospektiivse osa kohta, mis ulatub kuue aasta taha, ja kus teoreetiliselt
+võib ilmneda, et küsitluse hetkel leibkonna moodustanud 15-aastased loetakse
+kuus aastat varem samuti iseseisvaks leibkonnaks, kus nad esinevad alla
+kümneaastaste lastena. 
+Tähelepanu tuleb pöörata ka sellele, et andmetes on pereliikmete sünniajad
+esitatud kuu täpsusega, sellisel juhul on arvestuslikuks kuupäevaks loetud 14
+ehk arvutuslikult loetakse eelneva aasta oktoobrikuus sündinud oktoobrikuu
+uuringu ajaks alati üheaastaseks jne.
+\begin{description}
+\item[kids0.3] Leibkonnas uuritaval hetkel olnud 0-3 aastaste laste
+  arv, retrospektiivsetel perioodidel ebatäpne.
+\item[kids4.6] Leibkonnas uuritaval hetkel olnud 4-6 aastaste laste
+  arv, retrospektiivsetel perioodidel ebatäpne.
+\item[kids7.17] Leibkonnas uuritaval hetkel
+  olnud 7-17 aastaste laste arv, retrospektiivsetel perioodidel
+  ebatäpne.
+  \selectlanguage{english}
+\item[age63.64] \# of household members in age interval $[64,65)$.
+\item[age65.] \dots in interval $[65, \infty)$.
+\end{description}
+
+\subsection{Workplace Data}
+
+\begin{description}
+\item[industry] industry:
+  \begin{inparaitem}
+  \item[A] Agriculture, hunting and forestry;
+  \item[B] Fishing;
+  \item[C] Mining and quarrying;
+  \item[D] Manufacturing;
+  \item[E] Electricity, gas and water supply;
+  \item[F] Construction;
+  \item[G] Wholesale and retail trade; repair of motor vehicles etc.;
+  \item[H] Hotels and restaurants;
+  \item[I] Transport, storage and communication;
+  \item[J] Financial intermediation;
+  \item[K] Real estate, renting and business activities;
+  \item[L] Public administration and defence; compulsory social security;
+  \item[M] Education;
+  \item[N] Health and social work;
+  \item[O] Other community, social and personal service activities;
+  \item[P] Activities of households;
+  \item[Q] Extra-territorial organizations and bodies.
+  \end{inparaitem}
+\item[nWorkers] number of employees at the firm.  Following
+  classes:
+  \begin{inparaenum}
+  \item 1-10;\footnote{1-9 for ELFS 1995}
+  \item 11-19;\footnote{10-19 for ELFS 1995}
+  \item 20-49;
+  \item 50-99;
+  \item 100-199;
+  \item 200-499;
+  \item 500-999;
+  \item 1000-;
+  \end{inparaenum}
+\item[ownership] owner of the firm:
+  \begin{itemize}
+  \item[10] government (Estonian State)
+  \item[20] local government
+  \item[30] private, Estonian
+  \item[40] private, foreign
+  \item[50] private, mixed Estonian and foreign
+  \item[90] other
+  \end{itemize}
+\item[publicSector] (logical) the establishment is owned by public sector, and
+  is not operating on the free market.
+
+  \NA, if either this information, or information about the owners is missing.
+\item[workCountry] country of the workplace.  Until 1997 the
+  individual countries are present, later coded as '1' = Estonia; '2'
+  = another country.  Individual countries:
+  \begin{inparaitem}
+    \item[4] Afganistan;
+    \item[8] Albaania;
+    \item[10] Antarktika;
+    \item[12] Alzeeria;
+    \item[16] Ameerika Samoa (Ida-Samoa);
+    \item[20] Andorra;
+    \item[24] Angola;
+    \item[28] Antigua ja Barbuda;
+    \item[31] Aserbaidz'an;
+    \item[32] Argentina;
+    \item[36] Austraalia;
+    \item[40] Austria;
+    \item[44] Bahama Saared;
+    \item[48] Bahrein;
+    \item[50] Bangladesh;
+    \item[51] Armeenia;
+    \item[52] Barbados;
+    \item[56] Belgia;
+    \item[60] Bermuda;
+    \item[64] Bhutan;
+    \item[68] Boliivia;
+    \item[70] Bosnia ja Hertsegoviina;
+    \item[72] Botswana;
+    \item[74] Bouvet Saar;
+    \item[76] Brasiilia;
+    \item[84] Belize;
+    \item[86] Briti India ookeani ala;
+    \item[90] Solomoni Saared (Briti);
+    \item[92] Neitsisaared (Briti);
+    \item[96] Brunei;
+    \item[100] Bulgaaria;
+    \item[104] Myanmar (birma);
+    \item[108] Burundi;
+    \item[112] Valgevene;
+    \item[116] Kambodz'a;
+    \item[120] Kamerun;
+    \item[124] Kanada;
+    \item[132] Cabo Verde (Roheneemesaared);
+    \item[136] Kaimanisaared;
+    \item[140] Kesk-Aafrika Vabariik;
+    \item[144] Sri Lanka;
+    \item[148] Ts'aad;
+    \item[152] Chile;
+    \item[156] China;
+    \item[158] Taiwan;
+    \item[162] Jõulusaar;
+    \item[166] Kookosesaared;
+    \item[170] Kolumbia;
+    \item[174] Komoorid;
+    \item[175] Mayotte;
+    \item[178] Kongo;
+    \item[180] Sair;
+    \item[184] Cooki saared;
+    \item[188] Costa Rica;
+    \item[191] Horvaatia;
+    \item[192] Kuuba;
+    \item[196] Küpros;
+    \item[203] Ts'ehhimaa;
+    \item[204] Benin;
+    \item[208] Taani;
+    \item[212] Dominica;
+    \item[214] Dominikaani Vabariik;
+    \item[218] Ecuador;
+    \item[222] Salvador;
+    \item[226] Ekvatoriaal-Guinea;
+    \item[231] Etioopia;
+    \item[232] Eritrea;
+    \item[233] Eesti;
+    \item[234] Fääri saared;
+    \item[238] Falklandi (Malviini) saared;
+    \item[239] Lõuna-Georgia ja Lõuna-Sandwich;
+    \item[242] Fidz'i;
+    \item[246] Soome;
+    \item[249] Prantsuse emamaa;
+    \item[250] Prantsusmaa;
+    \item[254] Prantsuse Guajaana;
+    \item[258] Prantsuse Polüneesia;
+    \item[260] Prantsuse Lõunaalad;
+    \item[262] Djibouti;
+    \item[266] Gabon;
+    \item[268] Gruusia;
+    \item[270] Gambia;
+    \item[276] Saksamaa;
+    \item[288] Ghana;
+    \item[292] Gibraltar;
+    \item[296] Kiribati;
+    \item[300] Kreeka;
+    \item[304] Gröönimaa;
+    \item[308] Grenada;
+    \item[312] Guadeloupe;
+    \item[316] Guam;
+    \item[320] Guatemala;
+    \item[324] Guinea;
+    \item[328] Guyana;
+    \item[332] Haiti;
+    \item[334] Heard ja McDonald;
+    \item[336] Vatikan;
+    \item[340] Honduras;
+    \item[344] Hongkong;
+    \item[348] Ungari;
+    \item[352] Island;
+    \item[356] India;
+    \item[360] Indoneesia;
+    \item[364] Iraan;
+    \item[368] Iraak;
+    \item[372] Iirimaa;
+    \item[376] Iisrael;
+    \item[380] Itaalia;
+    \item[384] Elevandiluurannik;
+    \item[388] Jamaica;
+    \item[392] Jaapan;
+    \item[398] Kasahstan;
+    \item[400] Jordaania;
+    \item[404] Keenia;
+    \item[408] Korea RDV;
+    \item[410] Korea Vabariik;
+    \item[414] Kuveit;
+    \item[417] Kõrgõzstan;
+    \item[418] Laos;
+    \item[422] Liibanon;
+    \item[426] Lesotho;
+    \item[428] Läti;
+    \item[430] Libeeria;
+    \item[434] Liibüa;
+    \item[438] Liechtenstein;
+    \item[440] Leedu;
+    \item[442] Luksemburg;
+    \item[446] Macau;
+    \item[450] Malgassi Vabariik (Madagaskar);
+    \item[454] Malawi;
+    \item[458] Malaisia;
+    \item[462] Maldiivid;
+    \item[466] Mali;
+    \item[470] Malta;
+    \item[474] Martinigue;
+    \item[478] Mauritaania;
+    \item[480] Mauritius;
+    \item[484] Mehhiko;
+    \item[492] Monaco;
+    \item[496] Mongoolia;
+    \item[498] Moldova;
+    \item[500] Monsterrat;
+    \item[504] Maroko;
+    \item[508] Mosambiik;
+    \item[512] Omaan;
+    \item[516] Namiibia;
+    \item[520] Nauru;
+    \item[524] Nepal;
+    \item[528] Holland;
+    \item[530] Hollandi Antillid;
+    \item[533] Aruba;
+    \item[540] Uus-Caledoonia;
+    \item[548] Vanuatu;
+    \item[554] Uus-Meremaa;
+    \item[558] Nicaragua;
+    \item[562] Niger;
+    \item[566] Nigeeria;
+    \item[570] Niue;
+    \item[574] Norfolk;
+    \item[578] Norra;
+    \item[580] Põhja-Mariani Saared;
+    \item[581] USA väikesed üksiksaared;
+    \item[583] Mikroneesia;
+    \item[584] Marshalli saared;
+    \item[585] Palau;
+    \item[586] Pakistan;
+    \item[591] Panama;
+    \item[598] Paapua Uus-Guinea;
+    \item[600] Paraguay;
+    \item[604] Peruu;
+    \item[608] Filipiinid;
+    \item[612] Pitcairn;
+    \item[616] Poola;
+    \item[620] Portugal;
+    \item[624] Guinea-Bissau;
+    \item[626] Ida-Timor;
+    \item[630] Puerto Rico;
+    \item[634] Qatar;
+    \item[638] Reunion;
+    \item[642] Rumeenia;
+    \item[643] Venemaa;
+    \item[646] Ruanda;
+    \item[654] Saint Helena;
+    \item[659] Saint Kitts ja Nevis;
+    \item[660] Anguilla;
+    \item[662] Saint Lucia;
+    \item[666] Saint Pinrre ja Miguelon;
+    \item[670] Saint Vincent ja Grenadiinid;
+    \item[674] San Marino;
+    \item[678] Sao Tome ja Principe;
+    \item[682] Saudi Araabia;
+    \item[686] Senegal;
+    \item[690] Seisellid;
+    \item[694] Sierra Leone;
+    \item[702] Singapur;
+    \item[703] Slovakkia;
+    \item[704] Vietnam;
+    \item[705] Sloveenia;
+    \item[706] Somaalia;
+    \item[707] Serbia;
+    \item[710] Lõuna-Aafrika Vabariik;
+    \item[716] Zimbabwe;
+    \item[724] Hispaania;
+    \item[732] Lääne-Sahara;
+    \item[736] Sudaan;
+    \item[740] Surinam;
+    \item[744] Teravmäed [Svalbard] ja Jan Mayen;
+    \item[748] Svaasimaa;
+    \item[752] Rootsi;
+    \item[756] S'veits;
+    \item[760] Süüria;
+    \item[762] Tadz'ikistan;
+    \item[764] Tai;
+    \item[768] Togo;
+    \item[772] Tokelau;
+    \item[776] Tonga;
+    \item[780] Trinidad ja Tobago;
+    \item[784] Araabia Ühendemiraadid;
+    \item[788] Tuneesia;
+    \item[792] Türgi;
+    \item[795] Turkmeenia;
+    \item[796] Turks ja Caicos;
+    \item[798] Tuvalu;
+    \item[800] Uganda;
+    \item[804] Ukraina;
+    \item[807] Makedoonia;
+    \item[818] Egiptus;
+    \item[826] Suurbritannia (Ühendkuningriik);
+    \item[834] Tansaania;
+    \item[840] USA
+    \item[850] USA Neitsisaared;
+    \item[854] Burkina Faso (end.Ülem-Volta);
+    \item[858] Uruguay;
+    \item[860] Uzbekistan;
+    \item[862] Venezuela;
+    \item[876] Wallis ja Futuna;
+    \item[882] Lääne-Samoa;
+    \item[887] Jeemen;
+    \item[891] Jugoslaavia;
+    \item[894] Sambia;
+  \end{inparaitem}
+\item[workCounty] county of the firm or establishment.  \NA if not
+  working or not working in a defined geographical location.  Codes:
+  see \emph{residenceCounty}, page~\pageref{item:residenceCounty}.
+\item[workMuni] municipality of work.  Corresponds mostly to EHAK2008
+  specification.  However, certain territorial units (as Tallinn and
+  Kohtla-Järve neighbourhoods) are merged.  
+\item[employeeStatus] employer/employee type:
+  \begin{inparaitem}
+    \selectlanguage{estonian}
+  \item[1)] palgatöötaja;
+  \item[2)] palgatöötaja(te)ga ettevõtja;
+  \item[3)] palgatööjõuga talupidaja;
+  \item[4)] üksikettevõtja;
+  \item[5)] palgatööjõuta talupidaja;
+  \item[6)] vabakutseline;
+  \item[7)] palgata töötaja pereettevõttes, talus;
+  \item[8)] tulundusühistu liige;
+  \item[10)] ettevõtja palgatöötaja(te)ta;
+  \item[11)] other.
+  \end{inparaitem}
+\item[töökogemus ettevõttes] \textit{experienceInCompany}] mitu aastat on selles
+ettevõttes töötanud
+\end{description}
+
+
+\selectlanguage{english}
+\subsection{Work-related background data}
+
+\begin{description}
+\item[sidejob] respondent had more jobs beside of the main (first)
+  job.  Codes:
+  \begin{inparaitem}
+  \item[1] yes;
+  \item[2] from time to time (only present for the retrospective part);
+  \item[3] no;
+  \item[\NA] not working.    
+  \end{inparaitem}
+  Note that the information differs for survey week and the
+  retrospective part.
+
+  The retrospective information is based on the presence of second job
+  occupation, except for ELFS 1995 where the direct question is present.
+\item[unionMember] membership of union.  Data only present for the
+  survey week since 1997.  Missing for 1995.  
+
+  One can trust the answer \TRUE.  However, if the individual is
+  not working; or there is no union at the workplace, the answer is
+  \NA.  In 2007, however, it is \FALSE in the latter case.
+\item[activityStatus] Answer to the question ``what is your main
+  activity status'' (in 2001 wave):
+  \begin{inparaenum}
+  \item employed;
+  \item employed student;
+  \item employed retired person;
+  \item employed disabled person;
+  \item unemployed;
+  \item student;
+  \item retired;
+  \item disabled;
+  \item on parental leave;
+  \item military service;
+  \item imprisoned;
+  \item not working for other reasons;
+  \item other
+  \end{inparaenum}
+  See also: \emph{workForceStatus}
+\item[workForceStatus] Main labour force status:
+  % based on 'status', documented in ETU2002_kirjeldus.sxc
+  \begin{inparaenum}
+  \item employed;
+  \item unemployed;
+  \item inactive;
+  \end{inparaenum}
+  It is based on the variable \emph{status} for most of the waves.
+  However, for 1997 survey week, it is composed on questions about
+  job, employer status, farmer status and temporary holiday.
+
+  For retrospective observations, it is based on the employment and
+  unemployment spells.
+\selectlanguage{estonian}
+\item[Töökogemus] \textit{firstJob}] Aasta ja kuu, mil asus esmakordselt tööle.
+\item[tööturu] seisund, \textit{activityStatus}] kas töötab, on töötu või
+inaktiivne
+\selectlanguage{english}
+\item[wage] salary at the main job.
+
+  The income from secondary jobs is not included.
+
+  Gross salary until ELFS 1997, thereafter net salary.
+
+  For retrospective observations, it is based on questions: ``what was
+  your salary at that month''.  For the survey week, the question is
+  ``what was your salary at this job last month''.
+
+  Note that in many cases salary = 0.
+\end{description}
+
+\subsection{Job-related data}
+\begin{description}
+\item[occupation] Occupation:
+  \begin{inparaitem}
+  \item[0] Armed forces;
+  \item[1] Legislators, senior officials and managers;
+  \item[2] Professionals;
+  \item[3] Technicians and associate professionals;
+  \item[4] Clerks;
+  \item[5] Service workers and shop and market sales workers;
+  \item[6] Skilled agricultural and fishery workers;
+  \item[7] Craft and related trade workers;
+  \item[8] Plant and machine operators and assemblers;
+  \item[9] Elementary occupations;
+  \end{inparaitem}
+\item[howFoundJob] How the job was found.  Present for all the jobs
+  until 2000 Q2, since 2000 Q3 only for the main job at the survey
+  week.  Codes: 
+  \begin{inparaenum}
+  \item[0] was appointed after graduation;
+  \item[1] Asked relatives or friends;
+  \item[2] Responded to job advertisements;
+  \item[3] Placed job seeking advertisements;
+  \item[4] Contacted employers directly;
+  \item[5] Sought job through the State Employment Bureau (SEB) [RECORD NAME];
+  \item[6] Sought job through private employment bureau [RECORD NAME];
+  \item[7] By starting own business/farm;
+  \item[8] Started working on a family farm / in a family enterprise;
+  \item[9] Returned to my previous job after military service;
+  \item[10] Returned to my previous job after parental leave;
+  \item[11] In connection with closing down / reorganisation of the enterprise;
+  \item[12] (Better) job was offered, did not seek it;
+  \item[13] Second job became main job;
+  \item[14] OTHER [RECORD];
+  \end{inparaenum}
+\item[workhoursTotal] Total working hours.  
+
+  Only present for survey weeks for waves 1995--2000Q2
+\item[partOrFullTime] Whether working part-time (2) or full-time job
+  (1).  For retrospective observations this is based on question:
+  ``did you have full time or part time job''.  For the survey week,
+  the question is based on usual working hours at the first job;
+  part-time job means working less than 35 hours.  Note that periods
+  of part-time work are not accounted for.
+  \begin{inparaitem}
+  \item[1] full time;
+  \item[2] part time;
+  \item[3] alternately full- and part time (pre 2000/3 retrospective
+    observations only).
+  \end{inparaitem}
+\item[partTimeHours] Working hours, only correct for part-time workers
+  (\emph{partOrFullTime} = 2).
+\item[partTimeReason] Why the individual is working part-time.  The
+  answers are recoded from the original.  Note that slightly different
+  information is available in different waves and for
+  survey/retrospective part.
+  \begin{inparaenum}
+  \item[1] Studies
+  \item[2] Illness or injury
+  \selectlanguage{estonian} 
+  \item[3] Rasedus- või sünnituspuhkus
+  \item[4] Lapsehoolduspuhkus
+  \item[5] Vajadus hoolitseda laste eest
+  \item[6] Vajadus hoolitseda laste või hooldamist vajavate täiskasvanute eest
+  \item[7] Muud isiklikud või perekondlikud põhjused
+  \item[8] Vajadus hoolitseda teiste pereliikmete eest
+  \item[9] Tellimuste või töö vähesus
+  \item[10] Remont, tehniline rike vms
+  \item[11] Materjali- või tooraine vähesus
+  \item[12] Minu tööl loetakse täistööajaks vähem kui 35 tunnist töönädalat
+  \item[13] Ei ole täisajatööd leidnud
+  \item[14] Soovisin säilitada täispensioni
+  \item[15] Ei soovinud täisajaga töötada
+  \item[16] MUU [KIRJUTAGE TABELISSE
+  \end{inparaenum}
+  \selectlanguage{english}
+\end{description}
+
+\subsection{Unemployment}
+\label{sec:unemployment}
+
+\begin{description}
+\item[UDuration] If unemployed in the survey week: the unemployment
+  duration (up to the survey date) in weeks.
+
+  Note: it is assumed that the individual started the job search at
+  1st of the corresponding month.  The start date is based on start of
+  jobs search information, not necessarily end of previous job spell,
+  i.e. on-the-job search is included.  This leads to a number of
+  ridiculously long durations.
+
+  There are a few negative values.  In these cases the reported job
+  search starts from the month, following the interview.
+\item[UBEligibility] Eligibility for unemployment benefit measures:
+  \begin{inparaitem}
+  \item[0]: not eligible;
+  \item[1]: eligible for Unemployment Insurance Benefits
+    (töötuskindlustushüvitis).
+  \item[2]: eligible for Unemployment Allowance (töötu toetus)
+  \end{inparaitem}
+\item[UIBenefits] Size of last month UI benefits (krooni)
+\item[UAllowance] Size of last month U Allowance (krooni)
+\item[howSearchJob] How the responded searched for a job during the
+  past 4 weeks.  16-bit integer with the bits denoting following (from
+  the leftmost bit):
+  \begin{inparaitem}
+  \item[01)] Searched through the public employment agency;
+  \item[02)] \qquad through a private employment agency;
+  \item[03)] Asked employers directly;
+  \item[04)] Asked relatives, friends;
+  \item[05)] Answered ``help wanted'' ads;
+  \item[06)] Avaldasin ise tööotsimiskuulutusi;
+  \item[07)] Jälgisin tööpakkumiskuulutusi;
+  \item[08)] Käisin tööandja juures intervjuul, tegin testi või eksami;
+  \item[09)] Otsisin maad, ruume, seadmeid, töötajaid jms ettevõtluse alustamiseks / talu rajamiseks;
+  \item[10)] Taotlesin ettevõtte/talu registreerimist, tegevusluba, kauplemisluba, laenu;
+  \item[11)] Ootasin vastust töösaamise avaldusele;
+  \item[12)] Ootasin teadet Tööturuametist;
+  \item[13)] Ootasin konkursi tulemusi ametikohale riigi- või omavalitsusasutuse (avaliku] teenistuse seaduse järgi);
+  \item[14)] Ootasin varem kokkulepitud töö algust kuni 3 kuu pärast;
+  \item[15)] Ootasin varem kokkulepitud töö algust rohkem kui 3 kuu pärast;
+  \item[16)] MUU [KIRJUTAGE].
+  \end{inparaitem}
+
+  Only present for 2000-Q3 and later.
+\item[mainSearchMethod] which of the job search methods (as listed for
+  \emph{howSearchJob}) is the most important one.
+\item[reservationWage] Reservation wage, gross (bruto)\footnote{Note
+    that the employer has to pay a number of contributions on top of
+    the \emph{bruto}-wage.}, kroons per month.
+\item[reservationWageLevels] Reservation wage, in intervals.
+  Intervals are year-dependent: for years 2000-2007 they are:
+  \begin{inparaitem}
+  \item[1)] At least 500 kroons a month;
+  \item[2)] At least 1,000 kroons a month;
+  \item[3)] At least 2,000 kroons a month;
+  \item[4)] At least 3,000 kroons a month;
+  \item[5)] At least 4,000 kroons a month;
+  \item[6)] At least 5,000 kroons a month;
+  \item[7)] At least 10,000 kroons a month;
+  \item[8)] Over 10,000 kroons a month.
+  \end{inparaitem}
+  2008 and later, the coding is:
+  \begin{inparaitem}
+  \item[2)] Vähemalt 1000 krooni kuus;
+  \item[3)] Vähemalt 2000 krooni kuus;
+  \item[4)] Vähemalt 3000 krooni kuus;
+  \item[5)] Vähemalt 4000 krooni kuus;
+  \item[6)] Vähemalt 5000 krooni kuus;
+  \item[7)] Vähemalt 10 000 krooni kuus;
+  \item[8)] Vähemalt 15 000 krooni kuus;
+  \item[9)] Vähemalt 20 000 krooni kuus;
+  \item[10)] Üle 20 000 krooni kuus.
+  \end{inparaitem}
+\item[searchParttime] Searching full-time or part-time job:
+  \begin{inparaitem}
+  \item[1] only full-time;
+  \item[2] full-time, would agree with part-time;
+  \item[3] part-time, would agree with full-time;
+  \item[4] only part-time
+  \end{inparaitem}
+\item[prevIndustry] previous industry for the unemployed and
+  inactive.  Codes as for \emph{industry}:
+  \begin{inparaitem}
+  \item[A] Agriculture, hunting and forestry;
+  \item[B] Fishing;
+  \item[C] Mining and quarrying;
+  \item[D] Manufacturing;
+  \item[E] Electricity, gas and water supply;
+  \item[F] Construction;
+  \item[G] Wholesale and retail trade; repair of motor vehicles etc.;
+  \item[H] Hotels and restaurants;
+  \item[I] Transport, storage and communication;
+  \item[J] Financial intermediation;
+  \item[K] Real estate, renting and business activities;
+  \item[L] Public administration and defence; compulsory social security;
+  \item[M] Education;
+  \item[N] Health and social work;
+  \item[O] Other community, social and personal service activities;
+  \item[P] Activities of households;
+  \item[Q] Extra-territorial organizations and bodies.
+  \end{inparaitem}
+\item[prevOccupation] Previous occupation for the unemployed and
+  inactive.  Except for 1998, coded as \emph{occupation}:
+  \begin{inparaitem}
+  \item[0] Armed forces;
+  \item[1] Legislators, senior officials and managers;
+  \item[2] Professionals;
+  \item[3] Technicians and associate professionals;
+  \item[4] Clerks;
+  \item[5] Service workers and shop and market sales workers;
+  \item[6] Skilled agricultural and fishery workers;
+  \item[7] Craft and related trade workers;
+  \item[8] Plant and machine operators and assemblers;
+  \item[9] Elementary occupations;
+  \end{inparaitem}
+
+  For 1998, the codes are 1, 2 and 3, probably meaning primary,
+  secondary, and tertiary sector.
+\end{description}
+
+
+\section{Further Ideas}
+
+\selectlanguage{estonian}
+\begin{description}
+\item[tööturu ajalugu] Kas inimene on olnud viimase aasta (3 aasta)
+  jooksul töötu?  Mitteaktiivne?  Kas see on tema esimene töökoht?
+  Tuleks uurida mis on tehtav.
+
+\item[tervis] seda mida ETUst saab
+
+\item[kaalud] ETU on mingis osas \emph{choice-based} valim ja
+  tegelikult tuleks sääl kaaludega arvestada.
+\end{description}
+
+\selectlanguage{english}
+
+\section{TODO}
+\label{sec:todo}
+
+\begin{itemize}
+\item observation id-s seem to be NA-s since about 2000
+\end{itemize}
+
+\end{document}
