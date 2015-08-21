@@ -11,3 +11,15 @@
 # produced vignettes
 vignettes/*.html
 vignettes/*.pdf
+
+# data
+*.Rdat
+*.gz
+
+# latex stuff
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.log
+*.ps
